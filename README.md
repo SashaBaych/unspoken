@@ -24,6 +24,13 @@ In this flow, the inputs and outputs can be modeled as either:
 
 At present, the app only **displays the environment** without providing interactive controls to impact it. Development is severely limited due to the lack of access to a **Vision Pro** device, as the simulator does not support many features such as hand tracking.
 
+<img src="demo_images/sim_1.png" width="500">
+
+<img src="demo_images/sim_2.png" width="500">
+
+<img src="demo_images/sim_3.png" width="500">
+
+
 ### Experimenting with Shaders
 
 You can manually experiment with shader parameters in `Shaders.metal` before building the app. Below are some recommendations:
