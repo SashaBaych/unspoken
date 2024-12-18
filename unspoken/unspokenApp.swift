@@ -1,8 +1,8 @@
 //
-//  unspokenApp.swift
-//  unspoken
+//  volume_3App.swift
+//  volume_3
 //
-//  Created by Sasha Baych on 12/18/24.
+//  Created by Sasha Baych on 12/14/24.
 //
 
 import SwiftUI
@@ -24,7 +24,7 @@ struct ContentStageConfiguration: CompositorLayerConfiguration {
 }
 
 @main
-struct unspokenApp: App {
+struct volume_3App: App {
 
     @State private var appModel = AppModel()
 
@@ -40,6 +40,6 @@ struct unspokenApp: App {
                 Renderer.startRenderLoop(layerRenderer, appModel: appModel)
             }
         }
-        .immersionStyle(selection: .constant(.mixed), in: .mixed)
+        .immersionStyle(selection: .constant(.full), in: .full)
     }
 }

@@ -1,10 +1,3 @@
-//
-//  AppModel.swift
-//  unspoken
-//
-//  Created by Sasha Baych on 12/18/24.
-//
-
 import SwiftUI
 
 /// Maintains app-wide state

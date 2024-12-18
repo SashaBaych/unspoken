@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  unspoken
-//
-//  Created by Sasha Baych on 12/18/24.
-//
-
 import SwiftUI
 import RealityKit
 import RealityKitContent

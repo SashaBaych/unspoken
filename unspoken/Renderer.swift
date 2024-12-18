@@ -1,10 +1,3 @@
-//
-//  Renderer.swift
-//  unspoken
-//
-//  Created by Sasha Baych on 12/18/24.
-//
-
 import CompositorServices
 import Metal
 import MetalKit
@@ -172,9 +165,9 @@ actor Renderer {
     }
 
     static func buildRenderPipelineWithDevice(device: MTLDevice,
-                                              layerRenderer: LayerRenderer,
-                                              rasterSampleCount: Int,
-                                              mtlVertexDescriptor: MTLVertexDescriptor) throws -> MTLRenderPipelineState {
+                                            layerRenderer: LayerRenderer,
+                                            rasterSampleCount: Int,
+                                            mtlVertexDescriptor: MTLVertexDescriptor) throws -> MTLRenderPipelineState {
         /// Build a render state pipeline object
 
         let library = device.makeDefaultLibrary()
@@ -189,25 +182,46 @@ actor Renderer {
         pipelineDescriptor.vertexDescriptor = mtlVertexDescriptor
         pipelineDescriptor.rasterSampleCount = rasterSampleCount
 
+        // REPLACE THIS SECTION
         pipelineDescriptor.colorAttachments[0].pixelFormat = layerRenderer.configuration.colorFormat
         pipelineDescriptor.depthAttachmentPixelFormat = layerRenderer.configuration.depthFormat
+        pipelineDescriptor.maxVertexAmplificationCount = layerRenderer.properties.viewCount
+        // WITH THE NEW CODE BELOW
 
+        let colorAttachment = pipelineDescriptor.colorAttachments[0]!  // Note the ! to force unwrap
+        colorAttachment.pixelFormat = layerRenderer.configuration.colorFormat
+
+        // Enable alpha blending
+        colorAttachment.isBlendingEnabled = true
+        colorAttachment.sourceRGBBlendFactor = .sourceAlpha
+        colorAttachment.destinationRGBBlendFactor = .oneMinusSourceAlpha
+        colorAttachment.sourceAlphaBlendFactor = .sourceAlpha
+        colorAttachment.destinationAlphaBlendFactor = .oneMinusSourceAlpha
+        colorAttachment.rgbBlendOperation = .add
+        colorAttachment.alphaBlendOperation = .add
+
+        pipelineDescriptor.depthAttachmentPixelFormat = layerRenderer.configuration.depthFormat
+        pipelineDescriptor.maxVertexAmplificationCount = layerRenderer.properties.viewCount
+
+        pipelineDescriptor.depthAttachmentPixelFormat = layerRenderer.configuration.depthFormat
         pipelineDescriptor.maxVertexAmplificationCount = layerRenderer.properties.viewCount
 
         return try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
     }
 
     static func buildMesh(device: MTLDevice,
-                          mtlVertexDescriptor: MTLVertexDescriptor) throws -> MTKMesh {
-        /// Create and condition mesh data to feed into a pipeline using the given vertex descriptor
-
+                         mtlVertexDescriptor: MTLVertexDescriptor) throws -> MTKMesh {
         let metalAllocator = MTKMeshBufferAllocator(device: device)
-
-        let mdlMesh = MDLMesh.newBox(withDimensions: SIMD3<Float>(4, 4, 4),
-                                     segments: SIMD3<UInt32>(2, 2, 2),
-                                     geometryType: MDLGeometryType.triangles,
-                                     inwardNormals:false,
-                                     allocator: metalAllocator)
+        
+        // Create a large sphere with inward-facing normals
+        let mdlMesh = MDLMesh.newEllipsoid(
+            withRadii: SIMD3<Float>(10, 10, 10),  // Large radius to encompass viewer
+            radialSegments: 1024,                         // Horizontal resolution
+            verticalSegments: 512,                       // Vertical resolution
+            geometryType: .triangles,
+            inwardNormals: true,                        // Important: render on inside
+            hemisphere: true,                          // Full sphere, not just dome
+            allocator: metalAllocator)
 
         let mdlVertexDescriptor = MTKModelIOVertexDescriptorFromMetal(mtlVertexDescriptor)
 
@@ -281,29 +295,31 @@ actor Renderer {
     }
 
     private func updateGameState(drawable: LayerRenderer.Drawable, deviceAnchor: DeviceAnchor?) {
-        /// Update any game state before rendering
-
-        let rotationAxis = SIMD3<Float>(1, 1, 0)
-        let modelRotationMatrix = matrix4x4_rotation(radians: rotation, axis: rotationAxis)
-        let modelTranslationMatrix = matrix4x4_translation(0.0, 0.0, -8.0)
-        let modelMatrix = modelTranslationMatrix * modelRotationMatrix
-
+        let time = LayerRenderer.Clock.Instant.epoch.duration(to: drawable.frameTiming.presentationTime).timeInterval
+        let elapsedTime = Float(time)
+        
+        // Remove rotation and translation, we want the sphere static around us
+        let modelMatrix = matrix_identity_float4x4
         let simdDeviceAnchor = deviceAnchor?.originFromAnchorTransform ?? matrix_identity_float4x4
 
         func uniforms(forViewIndex viewIndex: Int) -> Uniforms {
             let view = drawable.views[viewIndex]
             let viewMatrix = (simdDeviceAnchor * view.transform).inverse
             let projection = drawable.computeProjection(viewIndex: viewIndex)
-
-            return Uniforms(projectionMatrix: projection, modelViewMatrix: viewMatrix * modelMatrix)
+            
+            return Uniforms(
+                projectionMatrix: projection,
+                modelViewMatrix: viewMatrix * modelMatrix,
+                time: elapsedTime,
+                size: SIMD2<Float>(Float(drawable.colorTextures[0].width),
+                                 Float(drawable.colorTextures[0].height))
+            )
         }
 
         self.uniforms[0].uniforms.0 = uniforms(forViewIndex: 0)
         if drawable.views.count > 1 {
             self.uniforms[0].uniforms.1 = uniforms(forViewIndex: 1)
         }
-
-        rotation += 0.01
     }
 
     func renderFrame() {
@@ -381,7 +397,7 @@ actor Renderer {
 
         renderEncoder.pushDebugGroup("Draw Box")
 
-        renderEncoder.setCullMode(.back)
+        renderEncoder.setCullMode(.front)
 
         renderEncoder.setFrontFacing(.counterClockwise)
 
@@ -390,6 +406,7 @@ actor Renderer {
         renderEncoder.setDepthStencilState(depthState)
 
         renderEncoder.setVertexBuffer(dynamicUniformBuffer, offset:uniformBufferOffset, index: BufferIndex.uniforms.rawValue)
+        renderEncoder.setFragmentBuffer(dynamicUniformBuffer, offset:uniformBufferOffset, index: BufferIndex.uniforms.rawValue)
 
         let viewports = drawable.views.map { $0.textureMap.viewport }
 

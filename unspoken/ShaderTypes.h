@@ -36,10 +36,11 @@ typedef NS_ENUM(EnumBackingType, TextureIndex)
     TextureIndexColor    = 0,
 };
 
-typedef struct
-{
+typedef struct {
     matrix_float4x4 projectionMatrix;
     matrix_float4x4 modelViewMatrix;
+    float time;
+    simd_float2 size;  // Changed from float2 to simd_float2
 } Uniforms;
 
 typedef struct
