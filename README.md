@@ -1,6 +1,6 @@
 # Unspoken
 
-This project builds upon the **Synaesthetic** art research project executed by the working group **Los Actantes**. The goal is to use Metal shaders to parametrize sound and render visual abstractions natively on Apple devices, including **iOS**, **iPadOS**, and **macOS**.
+This project is inspired by the **Synaesthetic** art research project executed by the working group **Los Actantes**, which aimed to use Metal shaders to parametrize sound and render visual abstractions natively on Apple devices, including **iOS**, **iPadOS**, and **macOS**. 
 
 [Link to the Synaesthetic repository](https://github.com/fabiofranzese/Synaesthetic.git)
 
